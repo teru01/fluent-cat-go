@@ -17,21 +17,15 @@ func main() {
 	app := &cli.App{
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:    "tag",
-				Aliases: []string{"t"},
-				Value:   "",
-				Usage:   "tag of fluentd",
-			},
-			&cli.StringFlag{
 				Name:    "host",
-				Aliases: []string{"h"},
+				Aliases: []string{"H"},
 				Value:   "127.0.0.1",
 				Usage:   "destination host",
 			},
-			&cli.StringFlag{
+			&cli.Int64Flag{
 				Name:    "port",
 				Aliases: []string{"p"},
-				Value:   "",
+				Value:   24224,
 				Usage:   "destination port",
 			},
 		},
@@ -48,12 +42,17 @@ func main() {
 }
 
 func readAndPost(c *cli.Context) error {
-	logger, err := fluent.New(fluent.Config{})
+	if c.NArg() != 1 {
+		return xerrors.New("missing tag argument")
+	}
+	logger, err := fluent.New(fluent.Config{
+		FluentPort: int(c.Int64("port")),
+		FluentHost: c.String("host"),
+	})
 	if err != nil {
 		return xerrors.Errorf("failed to create fluent logger: %w", err)
 	}
 	defer logger.Close()
-	tag := "myapp.access"
 
 	reader := bufio.NewReaderSize(os.Stdin, 2<<18)
 	for {
@@ -74,7 +73,7 @@ func readAndPost(c *cli.Context) error {
 			log.Println("failed to parse json", err)
 			continue
 		}
-		if err := logger.Post(tag, payload); err != nil {
+		if err := logger.Post(c.Args().Get(0), payload); err != nil {
 			log.Println("failed to post", err)
 			continue
 		}
