@@ -28,6 +28,10 @@ func main() {
 				Value:   24224,
 				Usage:   "destination port",
 			},
+			&cli.BoolFlag{
+				Name:  "async",
+				Usage: "enable async mode",
+			},
 		},
 		Name:   "fluent-cat-go",
 		Usage:  "fluent-cat-go -h [HOST] -p [PORT]",
@@ -46,15 +50,23 @@ func readAndPost(c *cli.Context) error {
 		return xerrors.New("missing tag argument")
 	}
 	logger, err := fluent.New(fluent.Config{
-		FluentPort: int(c.Int64("port")),
-		FluentHost: c.String("host"),
+		FluentPort:  int(c.Int64("port")),
+		FluentHost:  c.String("host"),
+		BufferLimit: 2 << 15,
+		Async:       c.Bool("async"),
+		AsyncResultCallback: func(data []byte, err error) {
+			if err != nil {
+				log.Printf("%+v\n", err)
+			}
+		},
 	})
+	log.Println("async mode: ", c.Bool("async"))
 	if err != nil {
 		return xerrors.Errorf("failed to create fluent logger: %w", err)
 	}
 	defer logger.Close()
 
-	reader := bufio.NewReaderSize(os.Stdin, 2<<18)
+	reader := bufio.NewReaderSize(os.Stdin, 2<<20)
 	for {
 		line, isPrefix, err := reader.ReadLine()
 		if err != nil {
@@ -78,5 +90,6 @@ func readAndPost(c *cli.Context) error {
 			continue
 		}
 	}
+	log.Println("Finishing fluent-cat-go....")
 	return nil
 }
