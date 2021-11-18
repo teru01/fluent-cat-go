@@ -82,7 +82,7 @@ func readAndPost(c *cli.Context) error {
 		}
 		payload := make(map[string]interface{})
 		if err = json.Unmarshal(line, &payload); err != nil {
-			log.Println("failed to parse json", err)
+			log.Println("failed to parse json", err, string(line))
 			continue
 		}
 		if err := logger.Post(c.Args().Get(0), payload); err != nil {
