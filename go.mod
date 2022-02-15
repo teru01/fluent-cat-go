@@ -1,4 +1,4 @@
-module fluent-cat-go
+module github.com/teru01/fluent-cat-go
 
 go 1.16
 
